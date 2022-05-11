@@ -34,21 +34,24 @@ func (saver LogSaver) saveGetRequest(request domain.GetOrderGatewayRequest) {
 	}
 }
 
-func (saver LogSaver) saveCreateRequest(request domain.CreateOrderGatewayRequest) {
+func (saver LogSaver) saveCreateRequest(request domain.CreateOrderGatewayRequest) (int64, error) {
 	bodyJson, marshalErr := json.Marshal(request.Body)
 	if marshalErr != nil {
 		log.Error().Msgf("Can't marshal body to json: %s", marshalErr.Error())
-		return
+		return -1, marshalErr
 	}
-	_, err := saver.connection.Exec(
-		"INSERT INTO request(request_id, request_time, type, body) values ($1, $2, $3, $4)",
+
+	res, err := saver.connection.Exec(
+		"INSERT INTO request(request_id, request_time, type, body) values (?, ?, ?, ?)",
 		request.RequestId, request.RequestTime, request.Type, string(bodyJson),
 	)
 
 	if err != nil {
 		log.Error().Msgf("Can't insert row: %s", err.Error())
-		return
+		return -1, marshalErr
 	}
+
+	return res.LastInsertId()
 }
 
 func (saver LogSaver) saveGetResponse(response domain.GetOrderGatewayResponse) {
