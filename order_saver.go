@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"order-service-log-saver/domain"
+	"os"
 	"reflect"
 )
 
@@ -14,24 +15,42 @@ type LogSaver struct {
 }
 
 func NewLogSaver() *LogSaver {
-	return &LogSaver{createDbConnection()}
+	host := os.Getenv("log_saver_db_host")
+	port := os.Getenv("log_saver_db_port")
+	user := os.Getenv("log_saver_db_user")
+	password := os.Getenv("log_saver_db_password")
+	dbName := os.Getenv("log_saver_db_name")
+
+	connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s", user, password, host, port, dbName)
+	db, err := sql.Open("pgx", connectionString)
+	if err != nil {
+		log.Fatal().Msg(err.Error())
+	}
+	err = db.Ping()
+	if err != nil {
+		log.Fatal().Msg(err.Error())
+	}
+	return &LogSaver{db}
 }
 
-func (saver LogSaver) saveGetRequest(request domain.GetOrderGatewayRequest) {
+func (saver LogSaver) saveGetRequest(request domain.GetOrderGatewayRequest) (int64, error) {
 	bodyJson, marshalErr := json.Marshal(request.Body)
 	if marshalErr != nil {
 		log.Error().Msgf("Can't marshal body to json: %s", marshalErr.Error())
-		return
+		return -1, marshalErr
 	}
-	_, err := saver.connection.Exec(
-		"INSERT INTO request(request_id, request_time, type, body) values ($1, $2, $3, $4)",
+
+	res, err := saver.connection.Exec(
+		"INSERT INTO request(request_id, request_time, type, body) values (?, ?, ?, ?)",
 		request.RequestId, request.RequestTime, request.Type, string(bodyJson),
 	)
 
 	if err != nil {
 		log.Error().Msgf("Can't insert row: %s", err.Error())
-		return
+		return -1, err
 	}
+
+	return res.LastInsertId()
 }
 
 func (saver LogSaver) saveCreateRequest(request domain.CreateOrderGatewayRequest) (int64, error) {
@@ -48,13 +67,13 @@ func (saver LogSaver) saveCreateRequest(request domain.CreateOrderGatewayRequest
 
 	if err != nil {
 		log.Error().Msgf("Can't insert row: %s", err.Error())
-		return -1, marshalErr
+		return -1, err
 	}
 
 	return res.LastInsertId()
 }
 
-func (saver LogSaver) saveGetResponse(response domain.GetOrderGatewayResponse) {
+func (saver LogSaver) saveGetResponse(response domain.GetOrderGatewayResponse) (int64, error) {
 	var bodyJson []byte
 	var marshalErr error
 
@@ -62,23 +81,25 @@ func (saver LogSaver) saveGetResponse(response domain.GetOrderGatewayResponse) {
 		bodyJson, marshalErr = json.Marshal(response.Body)
 		if marshalErr != nil {
 			log.Error().Msgf("Can't marshal body to json: %s", marshalErr.Error())
-			return
+			return -1, marshalErr
 		}
 	}
 
-	_, err := saver.connection.Exec(
+	res, err := saver.connection.Exec(
 		"INSERT INTO response(request_id, response_time, type, status, body, error_message) "+
-			"values ($1, $2, $3, $4, $5, $6)",
+			"values (?, ?, ?, ?, ?, ?)",
 		response.RequestId, response.ResponseTime, response.Type, response.Status, string(bodyJson), response.ErrorMessage,
 	)
 
 	if err != nil {
 		log.Error().Msgf("Can't insert row: %s", err.Error())
-		return
+		return -1, err
 	}
+
+	return res.LastInsertId()
 }
 
-func (saver LogSaver) saveCreateResponse(response domain.CreateOrderGatewayResponse) {
+func (saver LogSaver) saveCreateResponse(response domain.CreateOrderGatewayResponse) (int64, error) {
 	var bodyJson []byte
 	var marshalErr error
 
@@ -86,39 +107,20 @@ func (saver LogSaver) saveCreateResponse(response domain.CreateOrderGatewayRespo
 		bodyJson, marshalErr = json.Marshal(response.Body)
 		if marshalErr != nil {
 			log.Error().Msgf("Can't marshal body to json: %s", marshalErr.Error())
-			return
+			return -1, marshalErr
 		}
 	}
 
-	_, err := saver.connection.Exec(
+	res, err := saver.connection.Exec(
 		"INSERT INTO response(request_id, response_time, type, status, body, error_message) "+
-			"values ($1, $2, $3, $4, $5, $6)",
+			"values (?, ?, ?, ?, ?, ?)",
 		response.RequestId, response.ResponseTime, response.Type, response.Status, string(bodyJson), response.ErrorMessage,
 	)
 
 	if err != nil {
 		log.Error().Msgf("Can't insert row: %s", err.Error())
-		return
+		return -1, err
 	}
-}
 
-const (
-	host     = "localhost"
-	port     = 5433
-	user     = "order-service-log"
-	password = "order-service-log"
-	dbName   = "order-service-log"
-)
-
-func createDbConnection() *sql.DB {
-	connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s", user, password, host, port, dbName)
-	db, err := sql.Open("pgx", connectionString)
-	if err != nil {
-		log.Fatal().Msg(err.Error())
-	}
-	err = db.Ping()
-	if err != nil {
-		log.Fatal().Msg(err.Error())
-	}
-	return db
+	return res.LastInsertId()
 }
