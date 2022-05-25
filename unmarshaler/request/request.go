@@ -1,9 +1,10 @@
-package unmarshaler
+package request
 
 import (
 	"encoding/json"
 	"github.com/rs/zerolog/log"
 	"order-service-log-saver/domain"
+	"order-service-log-saver/unmarshaler"
 	"strings"
 )
 
@@ -12,13 +13,13 @@ func UnmarshalRequests(messages [][]byte) ([]domain.GetOrderGatewayRequest, []do
 	var createOrderRequests []domain.CreateOrderGatewayRequest
 
 	for _, msg := range messages {
-		if strings.Contains(string(msg), GetOrder) {
+		if strings.Contains(string(msg), unmarshaler.GetOrder) {
 			req, err := unmarshalGetOrderRequest(msg)
 			if err != nil {
 				continue
 			}
 			getOrderRequests = append(getOrderRequests, req)
-		} else if strings.Contains(string(msg), CreateOrder) {
+		} else if strings.Contains(string(msg), unmarshaler.CreateOrder) {
 			req, err := unmarshalCreateOrderRequest(msg)
 			if err != nil {
 				continue

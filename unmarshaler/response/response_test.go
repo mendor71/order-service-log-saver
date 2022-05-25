@@ -1,4 +1,4 @@
-package unmarshaler
+package response
 
 import (
 	"order-service-log-saver/domain"

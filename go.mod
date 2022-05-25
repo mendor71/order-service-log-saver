@@ -9,9 +9,12 @@ require (
 	github.com/jackc/pgx v3.6.2+incompatible // indirect
 	github.com/klauspost/compress v1.14.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.14 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rs/zerolog v1.26.1 // indirect
 	github.com/segmentio/kafka-go v0.4.31 // indirect
 	github.com/stretchr/testify v1.7.1 // indirect
+	golang.org/x/crypto v0.0.0-20211215165025-cf75a172585e // indirect
+	golang.org/x/text v0.3.6 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
 )
